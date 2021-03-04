@@ -1,0 +1,9 @@
+- hosts: web
+  become: true
+  roles:
+    - web
+
+- hosts: log
+  become: true
+  roles:
+    - log

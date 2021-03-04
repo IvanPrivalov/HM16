@@ -1,0 +1,67 @@
+---
+- name: Set timezone
+  timezone:
+    name: Europe/Moscow
+
+- name: Install epel repo
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install nginx
+  yum:
+    name: nginx
+    state: present
+
+- name: Start and enable nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Copy nginx.conf from template
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    validate: /usr/sbin/nginx -t -c %s
+  notify:
+    - reload nginx
+
+- name: Add audit rules for nginx config files
+  blockinfile:
+    path: /etc/audit/rules.d/audit.rules
+    block: |
+      ## Audit of nginx configuration files changes
+      -w /etc/nginx/nginx.conf -p wa -k nginx_conf
+      -w /etc/nginx/default.d/ -p wa -k nginx_conf
+  notify:
+    - restart auditd
+
+- name: Install audispd-plugins
+  yum:
+    name: audispd-plugins
+    state: present
+
+- name: Copy audispd config files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - {src: 'audispd-remote.conf',dest: '/etc/audisp/audisp-remote.conf'}
+    - {src: 'au-remote.conf',dest: '/etc/audisp/plugins.d/au-remote.conf'}
+    - {src: 'auditd.conf',dest: '/etc/audit/auditd.conf'}
+  notify:
+    - restart auditd
+
+- name: Copy rsyslog config
+  copy:
+    src: rsyslog.conf
+    dest: /etc/rsyslog.conf
+  notify:
+    - restart rsyslog
+
+
+
+
+
+
